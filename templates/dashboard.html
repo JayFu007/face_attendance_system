@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block title %}控制面板 - 校园人脸识别考勤系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>个人信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if has_face_data %}
+                    <div class="avatar-container mb-3">
+                        <i class="fas fa-user-circle fa-6x text-primary"></i>
+                        <span class="badge bg-success position-absolute bottom-0 end-0">
+                            <i class="fas fa-check"></i>
+                        </span>
+                    </div>
+                    <p class="text-success"><i class="fas fa-check-circle me-1"></i>人脸数据已注册</p>
+                    {% else %}
+                    <div class="avatar-container mb-3">
+                        <i class="fas fa-user-circle fa-6x text-secondary"></i>
+                        <span class="badge bg-warning position-absolute bottom-0 end-0">
+                            <i class="fas fa-exclamation"></i>
+                        </span>
+                    </div>
+                    <p class="text-warning"><i class="fas fa-exclamation-circle me-1"></i>尚未注册人脸数据</p>
+                    <a href="{{ url_for('face_registration') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-camera me-1"></i>立即注册
+                    </a>
+                    {% endif %}
+                </div>
+
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><i class="fas fa-id-card me-2"></i>学号</th>
+                            <td>{{ user.student_id }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><i class="fas fa-user me-2"></i>姓名</th>
+                            <td>{{ user.name }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><i class="fas fa-envelope me-2"></i>邮箱</th>
+                            <td>{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><i class="fas fa-calendar-alt me-2"></i>注册日期</th>
+                            <td>{{ user.registration_date }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>快速考勤</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="row">
+<!--                    <div class="col-6">-->
+<!--                        <button id="check-in-btn" class="btn btn-success btn-lg w-100 mb-2">-->
+<!--                            <i class="fas fa-sign-in-alt me-2"></i>签到-->
+<!--                        </button>-->
+<!--                    </div>-->
+<!--                    <div class="col-6">-->
+<!--                        <button id="check-out-btn" class="btn btn-danger btn-lg w-100 mb-2">-->
+<!--                            <i class="fas fa-sign-out-alt me-2"></i>签退-->
+<!--                        </button>-->
+<!--                    </div>-->
+                </div>
+                <div id="attendance-status" class="mt-2"></div>
+                <div class="mt-3">
+                    <a href="{{ url_for('face_recognition_attendance') }}" class="btn btn-primary w-100">
+                        <i class="fas fa-camera me-2"></i>人脸识别考勤
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>考勤记录</h5>
+            </div>
+            <div class="card-body">
+                {% if attendance_records %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>签到时间</th>
+                                <th>签退时间</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record.date }}</td>
+                                <td>{{ record.check_in_time }}</td>
+                                <td>{{ record.check_out_time if record.check_out_time else '未签退' }}</td>
+                                <td>
+                                    {% if record.check_out_time %}
+                                    <span class="badge bg-success">已完成</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">进行中</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>暂无考勤记录
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-end">
+                <a href="{{ url_for('attendance') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-list me-1"></i>查看全部记录
+                </a>
+                <a href="{{ url_for('face_registration_admin',user_id=user.id) }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-1"></i>管理
+                </a>
+            </div>
+        </div>
+
+        <!-- <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>本月统计</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="monthlyChart" width="100%" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="mb-0"><i class="fas fa-bell me-2"></i>通知</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">系统更新通知</h6>
+                                    <small>3天前</small>
+                                </div>
+                                <p class="mb-1">系统已更新到最新版本，新增人脸识别算法...</p>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">考勤规则变更</h6>
+                                    <small>1周前</small>
+                                </div>
+                                <p class="mb-1">根据学校规定，考勤时间调整为8:30-17:30...</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .avatar-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .avatar-container .badge {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 考勤按钮功能
+    document.getElementById('check-in-btn').addEventListener('click', function () {
+        const statusDiv = document.getElementById('attendance-status');
+        statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> 处理中...';
+
+        fetch('{{ url_for("process_check_in") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-warning">' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.innerHTML = '<div class="alert alert-danger">服务器错误，请稍后重试</div>';
+            });
+    });
+
+    document.getElementById('check-out-btn').addEventListener('click', function () {
+        const statusDiv = document.getElementById('attendance-status');
+        statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div> 处理中...';
+
+        fetch('{{ url_for("check_out") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = '<div class="alert alert-warning">' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.innerHTML = '<div class="alert alert-danger">服务器错误，请稍后重试</div>';
+            });
+    });
+
+    // 月度统计图表
+    // const ctx = document.getElementById('monthlyChart').getContext('2d');
+    // const monthlyChart = new Chart(ctx, {
+    //     type: 'bar',
+    //     data: {
+    //         labels: ['1日', '2日', '3日', '4日', '5日', '6日', '7日', '8日', '9日', '10日'],
+    //         datasets: [{
+    //             label: '考勤时长（小时）',
+    //             data: [8, 8.5, 7.5, 8, 8, 0, 0, 8.5, 8, 7],
+    //             backgroundColor: 'rgba(75, 192, 192, 0.2)',
+    //             borderColor: 'rgba(75, 192, 192, 1)',
+    //             borderWidth: 1
+    //         }]
+    //     },
+    //     options: {
+    //         scales: {
+    //             y: {
+    //                 beginAtZero: true,
+    //                 max: 10
+    //             }
+    //         },
+    //         plugins: {
+    //             legend: {
+    //                 display: false
+    //             }
+    //         },
+    //         maintainAspectRatio: false
+    //     }
+    // });
+</script>
+{% endblock %}

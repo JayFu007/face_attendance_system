@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}首页 - 校园人脸识别考勤系统{% endblock %}
+
+{% block content %}
+<div class="row align-items-center">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4">智能校园考勤系统</h1>
+        <p class="lead mb-4">基于深度学习的人脸识别技术，为校园考勤带来全新体验。告别传统签到方式，实现快速、准确、高效的智能考勤管理。</p>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
+            {% if session.get('user_id') %}
+            <a href="{{ url_for('face_recognition_attendance') }}" class="btn btn-primary btn-lg px-4 me-md-2">开始考勤</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-lg px-4">控制面板</a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4 me-md-2">登录系统</a>
+            <a href="{{ url_for('register') }}" class="btn btn-outline-secondary btn-lg px-4">注册账号</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <img src="https://ts1.tc.mm.bing.net/th/id/R-C.937bcb05970310a8a5571f0bb3546fc4?rik=96xBp7S5KaWIXg&riu=http%3a%2f%2fwww.99it.com.cn%2fuploads%2fallimg%2f220705%2f110F11091-0.jpg&ehk=uj2NkYzB57xDUl0TLNQk23faeIVVcJuYBJNE6Mpys7c%3d&risl=&pid=ImgRaw&r=0" class="img-fluid rounded shadow"
+            alt="人脸识别技术">
+    </div>
+</div>
+
+<!-- <div class="row mt-5 pt-5">
+    <div class="col-12 text-center">
+        <h2 class="mb-4">系统特点</h2>
+    </div>
+</div>
+
+<div class="row g-4 py-3">
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-bolt text-primary fa-3x mb-3"></i>
+                <h3 class="card-title">快速识别</h3>
+                <p class="card-text">采用先进的深度学习算法，实现毫秒级人脸识别，大幅提高考勤效率。</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt text-primary fa-3x mb-3"></i>
+                <h3 class="card-title">安全可靠</h3>
+                <p class="card-text">人脸特征加密存储，确保用户隐私安全，防止冒名顶替，提高考勤准确性。</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line text-primary fa-3x mb-3"></i>
+                <h3 class="card-title">数据分析</h3>
+                <p class="card-text">自动生成考勤统计报表，提供直观的数据可视化，辅助教学管理决策。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5 pt-3">
+    <div class="col-12 text-center">
+        <h2 class="mb-4">使用流程</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="steps">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>注册账号</h4>
+                    <p>创建个人账号，填写基本信息</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>人脸录入</h4>
+                    <p>上传照片或使用摄像头采集人脸数据</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>日常考勤</h4>
+                    <p>通过人脸识别快速完成签到签退</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>查看记录</h4>
+                    <p>随时查看个人考勤记录和统计数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> -->
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .steps {
+        display: flex;
+        justify-content: space-between;
+        margin: 2rem 0;
+        position: relative;
+    }
+
+    .steps:before {
+        content: '';
+        position: absolute;
+        top: 30px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e9ecef;
+        z-index: -1;
+    }
+
+    .step-item {
+        text-align: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .step-number {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+    .step-content h4 {
+        margin-bottom: 0.5rem;
+    }
+
+    .step-content p {
+        color: #6c757d;
+    }
+</style>
+{% endblock %}

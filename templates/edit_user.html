@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑用户 - 校园人脸识别考勤系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-user-edit me-2"></i>编辑用户</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_user', user_id=user.id) }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="student_id" class="form-label">学号 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                                <input type="text" class="form-control" id="student_id" name="student_id"
+                                    value="{{ user.student_id }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">姓名 <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}"
+                                    required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">电子邮箱 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">重置密码 <small
+                                class="text-muted">(留空表示不修改)</small></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password">
+                        </div>
+                        <div class="form-text">如需重置密码，请在此输入新密码</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">用户角色</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                            <select class="form-select" id="role" name="role">
+                                <option value="student" {% if user.role=='student' %}selected{% endif %}>学生</option>
+                                <option value="teacher" {% if user.role=='teacher' %}selected{% endif %}>教师</option>
+                                <option value="admin" {% if user.role=='admin' %}selected{% endif %}>管理员</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if
+                                user.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">账号状态（启用/禁用）</label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('user_management') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>返回用户列表
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        {% if user.has_face_data %}
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+                            data-bs-target="#resetFaceModal">
+                            <i class="fas fa-trash-alt me-1"></i>重置人脸数据
+                        </button>
+                        {% else %}
+                        <a href="{{ url_for('face_registration_admin', user_id=user.id) }}"
+                            class="btn btn-outline-success">
+                            <i class="fas fa-camera me-1"></i>注册人脸数据
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Face Data Modal -->
+<div class="modal fade" id="resetFaceModal" tabindex="-1" aria-labelledby="resetFaceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetFaceModalLabel">确认重置人脸数据</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要重置用户 <strong>{{ user.name }}</strong> 的人脸数据吗？</p>
+                <p class="text-danger">此操作不可逆，用户将需要重新注册人脸数据才能使用人脸识别功能。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <form action="{{ url_for('reset_face_data', user_id=user.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">确认重置</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

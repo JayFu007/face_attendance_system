@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+
+{% block title %}人脸识别考勤 - 校园人脸识别考勤系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-camera me-2"></i>人脸识别考勤</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h5 class="mb-3">请面向摄像头，系统将自动识别您的身份</h5>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>请确保光线充足，面部无遮挡
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div id="camera-container" class="position-relative">
+                            <video id="webcam" autoplay playsinline width="100%" class="rounded border"></video>
+                            <div id="face-overlay" class="position-absolute top-0 start-0 w-100 h-100"></div>
+                            <canvas id="canvas" class="d-none"></canvas>
+                        </div>
+
+                        <div id="recognition-status" class="text-center mt-3">
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-spinner fa-spin me-2"></i>准备中...
+                            </div>
+                        </div>
+
+                        <div id="recognition-result" class="text-center mt-3 d-none">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 id="result-name" class="card-title mb-2"></h5>
+                                    <p id="result-id" class="card-text text-muted"></p>
+                                    <p id="result-time" class="card-text"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-8 mx-auto">
+                        <div class="d-grid gap-2">
+                            <button id="start-camera" class="btn btn-primary">
+                                <i class="fas fa-video me-2"></i>启动摄像头
+                            </button>
+                            <button id="capture-photo" class="btn btn-success d-none">
+                                <i class="fas fa-camera me-2"></i>拍摄并识别
+                            </button>
+                            <button id="retry-button" class="btn btn-secondary d-none">
+                                <i class="fas fa-redo me-2"></i>重新识别
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>返回控制面板
+                        </a>
+                    </div>
+<!--                    <div class="col-md-6 text-md-end mt-2 mt-md-0">-->
+<!--                        <a href="{{ url_for('check_in') }}" class="btn btn-outline-primary">-->
+<!--                            <i class="fas fa-clipboard-check me-1"></i>手动考勤-->
+<!--                        </a>-->
+<!--                    </div>-->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #camera-container {
+        max-width: 640px;
+        margin: 0 auto;
+        border-radius: 0.25rem;
+        overflow: hidden;
+    }
+
+    #face-overlay {
+        pointer-events: none;
+    }
+
+    .face-box {
+        position: absolute;
+        border: 2px solid #28a745;
+        border-radius: 4px;
+    }
+
+    .face-label {
+        position: absolute;
+        background-color: rgba(40, 167, 69, 0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 2px;
+        font-size: 12px;
+        top: -20px;
+        left: 0;
+    }
+
+    .unknown-face {
+        border-color: #dc3545;
+    }
+
+    .unknown-face .face-label {
+        background-color: rgba(220, 53, 69, 0.8);
+    }
+
+    .processing-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+
+    .pulse {
+        animation: pulse 1.5s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const startCameraBtn = document.getElementById('start-camera');
+    const capturePhotoBtn = document.getElementById('capture-photo');
+    const retryButton = document.getElementById('retry-button');
+    const webcamVideo = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const faceOverlay = document.getElementById('face-overlay');
+    const recognitionStatus = document.getElementById('recognition-status');
+    const recognitionResult = document.getElementById('recognition-result');
+    const resultName = document.getElementById('result-name');
+    const resultId = document.getElementById('result-id');
+    const resultTime = document.getElementById('result-time');
+
+    let stream = null;
+    let isProcessing = false;
+
+    // 启动摄像头
+    startCameraBtn.addEventListener('click', async function () {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
+                }
+            });
+            webcamVideo.srcObject = stream;
+
+            startCameraBtn.classList.add('d-none');
+            capturePhotoBtn.classList.remove('d-none');
+            recognitionStatus.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>摄像头已启动，请面向摄像头</div>';
+
+            // 添加脉冲效果
+            webcamVideo.classList.add('pulse');
+        } catch (err) {
+            console.error('摄像头访问失败:', err);
+            recognitionStatus.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>无法访问摄像头: ' + err.message + '</div>';
+        }
+    });
+
+    // 拍摄照片并识别
+    capturePhotoBtn.addEventListener('click', function () {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        // 显示处理中状态
+        faceOverlay.innerHTML = '<div class="processing-indicator"><i class="fas fa-spinner fa-spin me-2"></i>正在识别...</div>';
+        recognitionStatus.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>正在处理，请稍候...</div>';
+
+        // 拍摄照片
+        canvas.width = webcamVideo.videoWidth;
+        canvas.height = webcamVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(webcamVideo, 0, 0, canvas.width, canvas.height);
+
+        // 获取图像数据
+        const imageData = canvas.toDataURL('image/jpeg');
+
+        // 发送到服务器进行人脸识别
+        fetch('{{ url_for("process_face_attendance") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'image_data=' + encodeURIComponent(imageData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                isProcessing = false;
+                faceOverlay.innerHTML = '';
+
+                if (data.success) {
+                    // 识别成功
+                    recognitionStatus.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
+
+                    // 显示结果
+                    resultName.textContent = data.user.name;
+                    resultId.textContent = '学号: ' + data.user.student_id;
+                    resultTime.textContent = '考勤时间: ' + new Date().toLocaleString();
+                    recognitionResult.classList.remove('d-none');
+
+                    // 更新按钮状态
+                    capturePhotoBtn.classList.add('d-none');
+                    retryButton.classList.remove('d-none');
+
+                    // 绘制人脸框
+                    drawFaceBox(true, data.user.name);
+
+                    // 移除脉冲效果
+                    webcamVideo.classList.remove('pulse');
+                } else {
+                    // 识别失败
+                    recognitionStatus.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' + data.message + '</div>';
+
+                    // 绘制未知人脸框
+                    drawFaceBox(false);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                isProcessing = false;
+                faceOverlay.innerHTML = '';
+                recognitionStatus.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>服务器错误，请稍后重试</div>';
+            });
+    });
+
+    // 重新识别
+    retryButton.addEventListener('click', function () {
+        recognitionResult.classList.add('d-none');
+        capturePhotoBtn.classList.remove('d-none');
+        retryButton.classList.add('d-none');
+        faceOverlay.innerHTML = '';
+        recognitionStatus.innerHTML = '<div class="alert alert-secondary"><i class="fas fa-info-circle me-2"></i>请面向摄像头，准备重新识别</div>';
+
+        // 添加脉冲效果
+        webcamVideo.classList.add('pulse');
+    });
+
+    // 绘制人脸框
+    function drawFaceBox(isRecognized, name) {
+        // 模拟人脸位置
+        const videoWidth = webcamVideo.videoWidth;
+        const videoHeight = webcamVideo.videoHeight;
+        const scale = webcamVideo.offsetWidth / videoWidth;
+
+        // 人脸框位置（居中）
+        const faceWidth = videoWidth * 0.4;
+        const faceHeight = videoHeight * 0.5;
+        const faceLeft = (videoWidth - faceWidth) / 2;
+        const faceTop = (videoHeight - faceHeight) / 2;
+
+        // 创建人脸框元素
+        const faceBox = document.createElement('div');
+        faceBox.className = 'face-box' + (isRecognized ? '' : ' unknown-face');
+        faceBox.style.left = (faceLeft * scale) + 'px';
+        faceBox.style.top = (faceTop * scale) + 'px';
+        faceBox.style.width = (faceWidth * scale) + 'px';
+        faceBox.style.height = (faceHeight * scale) + 'px';
+
+        // 添加标签
+        const faceLabel = document.createElement('div');
+        faceLabel.className = 'face-label';
+        faceLabel.textContent = isRecognized ? name : '未识别';
+        faceBox.appendChild(faceLabel);
+
+        faceOverlay.appendChild(faceBox);
+    }
+
+    // 页面卸载时停止摄像头
+    window.addEventListener('beforeunload', function () {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+{% endblock %}

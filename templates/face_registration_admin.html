@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}管理员人脸注册 - 校园人脸识别考勤系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-camera me-2"></i>为用户注册人脸数据</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <h5 class="mb-2"><i class="fas fa-info-circle me-2"></i>用户信息</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>学号：</strong> {{ user.student_id }}</p>
+                            <p><strong>姓名：</strong> {{ user.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>邮箱：</strong> {{ user.email }}</p>
+                            <p><strong>注册日期：</strong> {{ user.registration_date }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">上传照片</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('face_registration_admin', user_id=user.id) }}"
+                                    enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="face_image" class="form-label">选择照片</label>
+                                        <input class="form-control" type="file" id="face_image" name="face_image"
+                                            accept="image/jpeg,image/png,image/jpg" required>
+                                        <div class="form-text">请上传清晰的正面照片，确保光线充足，面部无遮挡</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div id="image-preview" class="text-center d-none">
+                                            <img id="preview-img" src="#" alt="预览图" class="img-fluid rounded mb-2"
+                                                style="max-height: 300px;">
+                                            <button type="button" id="clear-preview"
+                                                class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-times"></i> 清除
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-upload me-2"></i>上传并注册
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">使用摄像头</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    <div id="camera-container">
+                                        <video id="webcam" autoplay playsinline width="100%" class="rounded"></video>
+                                        <canvas id="canvas" class="d-none"></canvas>
+                                    </div>
+                                    <div id="captured-container" class="d-none">
+                                        <img id="captured-image" src="#" alt="已拍摄照片" class="img-fluid rounded mb-2">
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button id="start-camera" class="btn btn-info">
+                                        <i class="fas fa-video me-2"></i>打开摄像头
+                                    </button>
+                                    <button id="capture-photo" class="btn btn-primary d-none">
+                                        <i class="fas fa-camera me-2"></i>拍摄照片
+                                    </button>
+                                    <button id="retake-photo" class="btn btn-outline-secondary d-none">
+                                        <i class="fas fa-redo me-2"></i>重新拍摄
+                                    </button>
+                                    <button id="save-photo" class="btn btn-success d-none">
+                                        <i class="fas fa-save me-2"></i>保存并注册
+                                    </button>
+                                </div>
+                                <div id="webcam-status" class="mt-2 text-center"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>返回用户编辑
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        <a href="{{ url_for('user_management') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-1"></i>返回用户列表
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 照片上传预览
+    document.getElementById('face_image').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const previewImg = document.getElementById('preview-img');
+                previewImg.src = event.target.result;
+                document.getElementById('image-preview').classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('clear-preview').addEventListener('click', function () {
+        document.getElementById('face_image').value = '';
+        document.getElementById('image-preview').classList.add('d-none');
+    });
+
+    // 摄像头功能
+    const startCameraBtn = document.getElementById('start-camera');
+    const capturePhotoBtn = document.getElementById('capture-photo');
+    const retakePhotoBtn = document.getElementById('retake-photo');
+    const savePhotoBtn = document.getElementById('save-photo');
+    const webcamVideo = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const capturedImage = document.getElementById('captured-image');
+    const webcamContainer = document.getElementById('camera-container');
+    const capturedContainer = document.getElementById('captured-container');
+    const webcamStatus = document.getElementById('webcam-status');
+
+    let stream = null;
+
+    // 启动摄像头
+    startCameraBtn.addEventListener('click', async function () {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
+                }
+            });
+            webcamVideo.srcObject = stream;
+
+            startCameraBtn.classList.add('d-none');
+            capturePhotoBtn.classList.remove('d-none');
+            webcamStatus.innerHTML = '<span class="text-success">摄像头已启动</span>';
+        } catch (err) {
+            console.error('摄像头访问失败:', err);
+            webcamStatus.innerHTML = '<span class="text-danger">无法访问摄像头: ' + err.message + '</span>';
+        }
+    });
+
+    // 拍摄照片
+    capturePhotoBtn.addEventListener('click', function () {
+        canvas.width = webcamVideo.videoWidth;
+        canvas.height = webcamVideo.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(webcamVideo, 0, 0, canvas.width, canvas.height);
+
+        capturedImage.src = canvas.toDataURL('image/jpeg');
+
+        webcamContainer.classList.add('d-none');
+        capturedContainer.classList.remove('d-none');
+        capturePhotoBtn.classList.add('d-none');
+        retakePhotoBtn.classList.remove('d-none');
+        savePhotoBtn.classList.remove('d-none');
+    });
+
+    // 重新拍摄
+    retakePhotoBtn.addEventListener('click', function () {
+        webcamContainer.classList.remove('d-none');
+        capturedContainer.classList.add('d-none');
+        capturePhotoBtn.classList.remove('d-none');
+        retakePhotoBtn.classList.add('d-none');
+        savePhotoBtn.classList.add('d-none');
+    });
+
+    // 保存照片并注册
+    savePhotoBtn.addEventListener('click', function () {
+        const imageData = capturedImage.src;
+
+        // 显示加载状态
+        savePhotoBtn.disabled = true;
+        savePhotoBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 处理中...';
+
+        // 发送到服务器
+        fetch('{{ url_for("webcam_registration") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'image_data=' + encodeURIComponent(imageData) + '&user_id={{ user.id }}'
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 注册成功
+                    webcamStatus.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+
+                    // 停止摄像头
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    // 3秒后跳转到用户编辑页面
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("edit_user", user_id=user.id) }}';
+                    }, 3000);
+                } else {
+                    // 注册失败
+                    webcamStatus.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
+                    savePhotoBtn.disabled = false;
+                    savePhotoBtn.innerHTML = '<i class="fas fa-save me-2"></i>保存并注册';
+
+                    // 重置为拍摄状态
+                    setTimeout(() => {
+                        retakePhotoBtn.click();
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                webcamStatus.innerHTML = '<div class="alert alert-danger">服务器错误，请稍后重试</div>';
+                savePhotoBtn.disabled = false;
+                savePhotoBtn.innerHTML = '<i class="fas fa-save me-2"></i>保存并注册';
+            });
+    });
+
+    // 页面卸载时停止摄像头
+    window.addEventListener('beforeunload', function () {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+{% endblock %}
