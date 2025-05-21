@@ -20,6 +20,8 @@
                 <div class="row">
                     <div class="col-md-8 mx-auto">
                         <div id="camera-container" class="position-relative">
+                            <!-- 添加摄像头选择框 -->
+                            <select id="cameraSelect" style="margin-bottom:10px;"></select>
                             <video id="webcam" autoplay playsinline width="100%" class="rounded border"></video>
                             <div id="face-overlay" class="position-absolute top-0 start-0 w-100 h-100"></div>
                             <canvas id="canvas" class="d-none"></canvas>
@@ -302,6 +304,71 @@
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
         }
+    });
+
+    // 摄像头切换逻辑
+    let currentStream = null;
+
+    function stopCurrentStream() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+
+    function startCamera(deviceId) {
+        stopCurrentStream();
+        const constraints = {
+            video: deviceId ? { deviceId: { exact: deviceId } } : true
+        };
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                currentStream = stream;
+                webcamVideo.srcObject = stream;
+            })
+            .catch(err => {
+                alert('无法打开摄像头: ' + err);
+            });
+    }
+
+    function updateCameraList(selectedDeviceId) {
+        navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                const cameraSelect = document.getElementById('cameraSelect');
+                cameraSelect.innerHTML = '';
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                videoDevices.forEach((device, idx) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `摄像头 ${idx + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+                // 保持当前选择
+                if (selectedDeviceId && videoDevices.some(d => d.deviceId === selectedDeviceId)) {
+                    cameraSelect.value = selectedDeviceId;
+                }
+                // 默认启动第一个摄像头
+                if (videoDevices.length > 0 && (!selectedDeviceId || cameraSelect.value !== selectedDeviceId)) {
+                    startCamera(cameraSelect.value);
+                }
+            });
+    }
+
+    document.getElementById('cameraSelect').addEventListener('change', function () {
+        const deviceId = this.value;
+        startCamera(deviceId);
+    });
+
+    // 先请求摄像头权限，再刷新设备列表
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        currentStream = stream;
+        webcamVideo.srcObject = stream;
+        updateCameraList();
+        navigator.mediaDevices.addEventListener('devicechange', () => {
+            updateCameraList(document.getElementById('cameraSelect').value);
+        });
+    }).catch(err => {
+        alert('无法访问摄像头: ' + err);
     });
 </script>
 {% endblock %}
