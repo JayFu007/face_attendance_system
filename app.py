@@ -399,65 +399,60 @@ def face_recognition_attendance():
 @app.route('/process-face-attendance', methods=['POST'])
 def process_face_attendance():
     """Process face recognition attendance"""
-    # Get the base64 encoded image from the request
     image_data = request.form.get('image_data')
-
     if not image_data:
         return jsonify({'success': False, 'message': 'No image data received'})
 
-    # Remove the data URL prefix
     image_data = image_data.split(',')[1]
-
-    # Decode the base64 image
     image_bytes = base64.b64decode(image_data)
-
-    # Generate a temporary filename
     temp_filename = f"temp_{uuid.uuid4().hex}.jpg"
     temp_filepath = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
 
-    # Save the image
     with open(temp_filepath, 'wb') as f:
         f.write(image_bytes)
 
     try:
-        # Process the image for face detection
         image = face_recognition.load_image_file(temp_filepath)
         face_locations = face_recognition.face_locations(image)
 
         if not face_locations:
             return jsonify({'success': False, 'message': 'No face detected in the image. Please try again.'})
-
         if len(face_locations) > 1:
-            return jsonify({'success': False,
-                            'message': 'Multiple faces detected. Please ensure only one person is in the frame.'})
+            return jsonify({'success': False, 'message': 'Multiple faces detected. Please ensure only one person is in the frame.'})
 
-        # Extract face encoding
         face_encoding = face_recognition.face_encodings(image, face_locations)[0]
 
-        # Get all face encodings from database
+        # 获取所有人脸编码，确保包含user_id、student_id、name
         all_encodings = FaceEncoding.get_all_face_encodings()
-
         if not all_encodings:
             return jsonify({'success': False, 'message': 'No registered faces found in the database.'})
 
-        # Compare with known face encodings
         known_encodings = [enc['encoding'] for enc in all_encodings]
         matches = face_recognition.compare_faces(known_encodings, face_encoding)
         face_distances = face_recognition.face_distance(known_encodings, face_encoding)
 
-        matched_users = []
+        # 找到最佳匹配（距离最小且匹配成功）
+        best_match_index = None
+        min_distance = 1.0
         for i, match in enumerate(matches):
-            if match:
-                confidence = 1 - face_distances[i]
-                matched_users.append({
-                    'name': all_encodings[i]['name'],
-                    'student_id': all_encodings[i]['student_id'],
-                    'confidence': confidence
-                })
+            if match and face_distances[i] < min_distance:
+                min_distance = face_distances[i]
+                best_match_index = i
 
-        if matched_users:
-            # Record attendance for the first matched user
-            attendance_id = Attendance.record_check_in(matched_users[0]['student_id'])
+        matched_users = []
+        if best_match_index is not None:
+            confidence = 1 - face_distances[best_match_index]
+            matched_user = {
+                'user_id': all_encodings[best_match_index]['user_id'],
+                'student_id': all_encodings[best_match_index]['student_id'],
+                'name': all_encodings[best_match_index]['name'],
+                'confidence': confidence
+            }
+            matched_users.append(matched_user)
+
+            # 用 user_id 进行考勤
+            matched_user_id = matched_user['user_id']
+            attendance_id = Attendance.record_check_in(matched_user_id)
 
             if attendance_id:
                 return jsonify({
@@ -475,7 +470,6 @@ def process_face_attendance():
             return jsonify({'success': False, 'message': 'Face not recognized. Please register your face or try again.'})
 
     finally:
-        # Clean up the temporary file
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
 

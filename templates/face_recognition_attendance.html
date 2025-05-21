@@ -227,8 +227,13 @@
                     recognitionStatus.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>' + data.message + '</div>';
 
                     // 显示结果
-                    resultName.textContent = data.user.name;
-                    resultId.textContent = '学号: ' + data.user.student_id;
+                    if (Array.isArray(data.matched_users) && data.matched_users.length > 0) {
+                        resultName.textContent = data.matched_users[0].name;
+                        resultId.textContent = '学号: ' + data.matched_users[0].student_id;
+                    } else {
+                        resultName.textContent = '';
+                        resultId.textContent = '';
+                    }
                     resultTime.textContent = '考勤时间: ' + new Date().toLocaleString();
                     recognitionResult.classList.remove('d-none');
 
@@ -237,7 +242,7 @@
                     retryButton.classList.remove('d-none');
 
                     // 绘制人脸框
-                    drawFaceBox(true, data.user.name);
+                    drawFaceBox(true, (Array.isArray(data.matched_users) && data.matched_users.length > 0) ? data.matched_users[0].name : '');
 
                     // 移除脉冲效果
                     webcamVideo.classList.remove('pulse');
