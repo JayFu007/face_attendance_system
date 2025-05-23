@@ -42,7 +42,7 @@ def index():
     """Home page route"""
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    return render_template('index.html',hide_dashboard_nav=True)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -54,7 +54,7 @@ def login():
 
         if not student_id or not password:
             flash('Please provide both student ID and password', 'danger')
-            return render_template('login.html')
+            return render_template('login.html',hide_dashboard_nav=True)
 
         user = User.authenticate(student_id, password)
 
@@ -62,12 +62,13 @@ def login():
             session['user_id'] = user['id']
             session['student_id'] = user['student_id']
             session['name'] = user['name']
+            session['role'] = user.get('role', 'user')  # Add role to session
             flash(f'Welcome back, {user["name"]}!', 'success')
             return redirect(url_for('dashboard'))
         else:
             flash('Invalid student ID or password', 'danger')
 
-    return render_template('login.html')
+    return render_template('login.html',hide_dashboard_nav=True)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -83,17 +84,17 @@ def register():
         # Validate input
         if not all([student_id, name, email, password, confirm_password]):
             flash('Please fill in all fields', 'danger')
-            return render_template('register.html')
+            return render_template('register.html',hide_dashboard_nav=True)
 
         if password != confirm_password:
             flash('Passwords do not match', 'danger')
-            return render_template('register.html')
+            return render_template('register.html',hide_dashboard_nav=True)
 
         # Check if student ID already exists
         existing_user = User.get_user_by_student_id(student_id)
         if existing_user:
             flash('Student ID already registered', 'danger')
-            return render_template('register.html')
+            return render_template('register.html',hide_dashboard_nav=True)
 
         # Create user
         user_id = User.create_user(student_id, name, email, password)
@@ -104,7 +105,7 @@ def register():
         else:
             flash('Registration failed. Please try again.', 'danger')
 
-    return render_template('register.html')
+    return render_template('register.html',hide_dashboard_nav=True)
 
 
 @app.route('/logout')
@@ -194,7 +195,7 @@ def face_registration():
         else:
             flash('Invalid file type. Please upload a JPG, JPEG or PNG image.', 'danger')
 
-    return render_template('face_registration.html')
+    return render_template('face_registration.html',hide_dashboard_nav=True)
 
 
 @app.route('/webcam-registration', methods=['GET', 'POST'])
@@ -250,7 +251,7 @@ def webcam_registration():
             os.remove(filepath)
             return jsonify({'success': False, 'message': 'Failed to register face. Please try again.'})
 
-    return render_template('webcam_registration.html')
+    return render_template('webcam_registration.html',hide_dashboard_nav=True)
 
 
 @app.route('/webcam-registration-admin', methods=['POST'])
@@ -340,7 +341,7 @@ def attendance():
 
     return render_template('attendance.html',
                            attendance_records=attendance_records,
-                           selected_date=date)
+                           selected_date=date,hide_dashboard_nav=True)
 
 
 @app.route('/check-in', methods=['GET'])
@@ -350,7 +351,7 @@ def check_in():
         flash('Please login first', 'warning')
         return redirect(url_for('login'))
 
-    return render_template('check_in.html')
+    return render_template('check_in.html',hide_dashboard_nav=True)
 
 
 @app.route('/process-check-in', methods=['POST'])
@@ -394,7 +395,7 @@ def face_recognition_attendance():
         flash('Please login first', 'warning')
         return redirect(url_for('login'))
 
-    return render_template('face_recognition_attendance.html')
+    return render_template('face_recognition_attendance.html',hide_dashboard_nav=True)
 
 
 @app.route('/process-face-attendance', methods=['POST'])
@@ -423,8 +424,23 @@ def process_face_attendance():
 
         face_encoding = face_recognition.face_encodings(image, face_locations)[0]
 
-        # 获取所有人脸编码，确保包含user_id、student_id、name
-        all_encodings = FaceEncoding.get_all_face_encodings()
+        # 判断是否为管理员
+        is_admin = session.get('role') == 'admin' or session.get('student_id') == 'admin'
+
+        if is_admin:
+            # 管理员：允许识别所有用户
+            all_encodings = FaceEncoding.get_all_face_encodings()
+        else:
+            # 普通用户：只允许识别自己
+            user_id = session.get('user_id')
+            all_encodings = FaceEncoding.get_face_encodings_by_user_id(user_id)
+            # 需要补充 student_id 和 name 字段
+            user = User.get_user_by_id(user_id)
+            for enc in all_encodings:
+                enc['student_id'] = user['student_id']
+                enc['name'] = user['name']
+                enc['user_id'] = user['id']
+
         if not all_encodings:
             return jsonify({'success': False, 'message': 'No registered faces found in the database.'})
 
@@ -510,7 +526,7 @@ def user_management():
                            users=users,
                            search_query=search_query,
                            current_page=page,
-                           total_pages=total_pages)
+                           total_pages=total_pages,hide_dashboard_nav=True)
 
 
 @app.route('/edit-user/<int:user_id>', methods=['GET', 'POST'])
@@ -550,7 +566,7 @@ def edit_user(user_id):
         else:
             flash('Failed to update user', 'danger')
 
-    return render_template('edit_user.html', user=user)
+    return render_template('edit_user.html', user=user,hide_dashboard_nav=True)
 
 
 @app.route('/delete-user/<int:user_id>', methods=['POST'])
@@ -663,7 +679,7 @@ def face_registration_admin(user_id):
         else:
             flash('Invalid file type. Please upload a JPG, JPEG or PNG image.', 'danger')
 
-    return render_template('face_registration_admin.html', user=user)
+    return render_template('face_registration_admin.html', user=user,hide_dashboard_nav=True)
 
 
 @app.route('/detect-face', methods=['POST'])
