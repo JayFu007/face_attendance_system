@@ -135,7 +135,8 @@ def dashboard():
     return render_template('dashboard.html',
                            user=user,
                            has_face_data=has_face_data,
-                           attendance_records=attendance_records)
+                           attendance_records=attendance_records,
+                           hide_dashboard_nav=True)
 
 
 @app.route('/face-registration', methods=['GET', 'POST'])
